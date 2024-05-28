@@ -34,7 +34,8 @@
         "ext-filter": "*",
         "ext-libxml": "*",
         "ext-xmlreader": "*",
-        "ext-zip": "*"
+        "ext-zip": "*",
+        "maennchen/zipstream-php": "^3.1"
     },
     "require-dev": {
         "ext-zlib": "*",

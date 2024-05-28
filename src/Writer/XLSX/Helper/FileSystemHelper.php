@@ -405,6 +405,7 @@ final class FileSystemHelper implements FileSystemWithRootFolderHelperInterface
      * Zips the root folder and streams the contents of the zip into the given stream.
      *
      * @param resource $streamPointer Pointer to the stream to copy the zip
+     * @throws IOException
      */
     public function zipRootFolderAndCopyToStream($streamPointer): void
     {
@@ -423,7 +424,9 @@ final class FileSystemHelper implements FileSystemWithRootFolderHelperInterface
         $this->zipHelper->closeArchiveAndCopyToStream($zip, $streamPointer);
 
         // once the zip is copied, remove it
-        $this->deleteFile($zipFilePath);
+        if (!empty($zipFilePath)) {
+            $this->deleteFile($zipFilePath);
+        }
     }
 
     /**

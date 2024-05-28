@@ -7,6 +7,7 @@ namespace OpenSpout\Writer;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Exception\IOException;
 use OpenSpout\Writer\Exception\WriterNotOpenedException;
+use ZipStream\ZipStream;
 
 abstract class AbstractWriter implements WriterInterface
 {
@@ -27,6 +28,14 @@ abstract class AbstractWriter implements WriterInterface
 
     /** @var 0|positive-int */
     private int $writtenRowCount = 0;
+
+    private float $startTime;
+
+    private float $currentTime;
+
+    private float $elapsedTime;
+
+    private null|ZipStream $zip;
 
     final public function openToFile($outputFilePath): void
     {
@@ -55,53 +64,68 @@ abstract class AbstractWriter implements WriterInterface
      * @codeCoverageIgnore
      *
      * @param mixed $outputFileName
+     *
+     * @throws IOException
      */
-    final public function openToBrowser($outputFileName): void
+    final public function openToBrowser($outputFileName, null|bool $zip = null): void
     {
         $this->outputFilePath = basename($outputFileName);
 
-        $resource = fopen('php://output', 'w');
-        \assert(false !== $resource);
-        $this->filePointer = $resource;
+        if (null === $zip) {
+            $this->zip = null;
 
-        // Clear any previous output (otherwise the generated file will be corrupted)
-        // @see https://github.com/box/spout/issues/241
-        if (ob_get_length() > 0) {
-            ob_end_clean();
+            $resource = fopen('php://output', 'w');
+            \assert(false !== $resource);
+            $this->filePointer = $resource;
+
+            // Clear any previous output (otherwise the generated file will be corrupted)
+            // @see https://github.com/box/spout/issues/241
+            if (ob_get_length() > 0) {
+                ob_end_clean();
+            }
+
+            /*
+             * Set headers
+             *
+             * For newer browsers such as Firefox, Chrome, Opera, Safari, etc., they all support and use `filename*`
+             * specified by the new standard, even if they do not automatically decode filename; it does not matter;
+             * and for older versions of Internet Explorer, they are not recognized `filename*`, will automatically
+             * ignore it and use the old `filename` (the only minor flaw is that there must be an English suffix name).
+             * In this way, the multi-browser multi-language compatibility problem is perfectly solved, which does not
+             * require UA judgment and is more in line with the standard.
+             *
+             * @see https://github.com/box/spout/issues/745
+             * @see https://tools.ietf.org/html/rfc6266
+             * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
+             */
+            header('Content-Type: '.static::$headerContentType);
+            header(
+                'Content-Disposition: attachment; '.
+                'filename="'.rawurlencode($this->outputFilePath).'"; '.
+                'filename*=UTF-8\'\''.rawurlencode($this->outputFilePath)
+            );
+
+            /*
+             * When forcing the download of a file over SSL,IE8 and lower browsers fail
+             * if the Cache-Control and Pragma headers are not set.
+             *
+             * @see http://support.microsoft.com/KB/323308
+             * @see https://github.com/liuggio/ExcelBundle/issues/45
+             */
+            header('Cache-Control: max-age=0');
+            header('Pragma: public');
+        } else {
+            $this->startTime = microtime(true);
+            $this->zip = new ZipStream(
+                enableZip64: false,
+                defaultEnableZeroHeader: true,
+                outputName: $this->outputFilePath,
+                flushOutput: true
+            );
+            $this->addXLSXHBFile();
         }
 
-        /*
-         * Set headers
-         *
-         * For newer browsers such as Firefox, Chrome, Opera, Safari, etc., they all support and use `filename*`
-         * specified by the new standard, even if they do not automatically decode filename; it does not matter;
-         * and for older versions of Internet Explorer, they are not recognized `filename*`, will automatically
-         * ignore it and use the old `filename` (the only minor flaw is that there must be an English suffix name).
-         * In this way, the multi-browser multi-language compatibility problem is perfectly solved, which does not
-         * require UA judgment and is more in line with the standard.
-         *
-         * @see https://github.com/box/spout/issues/745
-         * @see https://tools.ietf.org/html/rfc6266
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
-         */
-        header('Content-Type: '.static::$headerContentType);
-        header(
-            'Content-Disposition: attachment; '.
-            'filename="'.rawurlencode($this->outputFilePath).'"; '.
-            'filename*=UTF-8\'\''.rawurlencode($this->outputFilePath)
-        );
-
-        /*
-         * When forcing the download of a file over SSL,IE8 and lower browsers fail
-         * if the Cache-Control and Pragma headers are not set.
-         *
-         * @see http://support.microsoft.com/KB/323308
-         * @see https://github.com/liuggio/ExcelBundle/issues/45
-         */
-        header('Cache-Control: max-age=0');
-        header('Pragma: public');
-
-        $this->openWriter();
+        $this->openWriter($this->zip);
         $this->isWriterOpened = true;
     }
 
@@ -113,6 +137,7 @@ abstract class AbstractWriter implements WriterInterface
 
         $this->addRowToWriter($row);
         ++$this->writtenRowCount;
+        $this->sendHeartBeat();
     }
 
     final public function addRows(array $rows): void
@@ -140,7 +165,9 @@ abstract class AbstractWriter implements WriterInterface
 
         $this->closeWriter();
 
-        fclose($this->filePointer);
+        if (null !== $this->filePointer) {
+            fclose($this->filePointer);
+        }
 
         $this->isWriterOpened = false;
     }
@@ -150,7 +177,7 @@ abstract class AbstractWriter implements WriterInterface
      *
      * @throws IOException If the writer cannot be opened
      */
-    abstract protected function openWriter(): void;
+    abstract protected function openWriter(null|ZipStream $zip = null): void;
 
     /**
      * Adds a row to the currently opened writer.
@@ -166,4 +193,25 @@ abstract class AbstractWriter implements WriterInterface
      * Closes the streamer, preventing any additional writing.
      */
     abstract protected function closeWriter(): void;
+
+    private function sendHeartBeat(): void
+    {
+        $this->currentTime = microtime(true);
+        $this->elapsedTime = $this->currentTime - $this->startTime;
+        if ($this->elapsedTime >= 5) {
+            // Resetta il tempo di partenza
+            $this->startTime = microtime(true);
+
+            $this->addXLSXHBFile();
+        }
+    }
+
+    private function addXLSXHBFile(): void
+    {
+        // Esegui l'istruzione qui
+        $this->zip->addFile(
+            fileName: 'readme'.uniqid().'.xml',
+            data: '<?xml version="1.0" encoding="UTF-8"?><root></root>'
+        );
+    }
 }

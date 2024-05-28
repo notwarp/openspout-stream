@@ -7,6 +7,7 @@ namespace OpenSpout\Writer;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Exception\InvalidArgumentException;
 use OpenSpout\Common\Exception\IOException;
+use ZipStream\ZipStream;
 
 interface WriterInterface
 {
@@ -28,7 +29,7 @@ interface WriterInterface
      *
      * @throws IOException If the writer cannot be opened
      */
-    public function openToBrowser(string $outputFileName): void;
+    public function openToBrowser(string $outputFileName, null|bool $zip = null): void;
 
     /**
      * Appends a row to the end of the stream.

@@ -17,6 +17,7 @@ use OpenSpout\Writer\XLSX\Manager\Style\StyleManager;
 use OpenSpout\Writer\XLSX\Manager\Style\StyleRegistry;
 use OpenSpout\Writer\XLSX\Manager\WorkbookManager;
 use OpenSpout\Writer\XLSX\Manager\WorksheetManager;
+use ZipStream\ZipStream;
 
 final class Writer extends AbstractWriterMultiSheets
 {
@@ -35,13 +36,13 @@ final class Writer extends AbstractWriterMultiSheets
         return $this->options;
     }
 
-    protected function createWorkbookManager(): WorkbookManager
+    protected function createWorkbookManager(null|ZipStream $zip = null): WorkbookManager
     {
         $workbook = new Workbook();
 
         $fileSystemHelper = new FileSystemHelper(
             $this->options->getTempFolder(),
-            new ZipHelper(),
+            new ZipHelper($zip),
             new XLSX(),
             $this->creator
         );
