@@ -56,16 +56,47 @@ $options->SHOULD_CREATE_NEW_SHEETS_AUTOMATICALLY = false; // will stop writing n
 $writer = new Writer($options);
 ```
 
-### Setting custom document creator
+### Setting custom document creator (ODS writer)
 
 It is possible to change default document creator.
 The default creator is OpenSpout
 
 ```php
 use OpenSpout\Writer\ODS\Options;
+use OpenSpout\Writer\ODS\Writer;
 
 $writer = new Writer();
 $writer->setCreator('Custom creator');
+```
+
+### Setting custom document properties (XLSX writer)
+
+It is possible to change default document properties.
+The default values are as follows.
+
+```php
+use OpenSpout\Writer\XLSX\Options;
+use OpenSpout\Writer\XLSX\Properties;
+use OpenSpout\Writer\XLSX\Writer;
+
+$properties = new Properties(
+    title: 'Untitled Spreadsheet',
+    subject: null,
+    application: 'OpenSpout',
+    creator: 'OpenSpout',
+    lastModifiedBy: 'OpenSpout',
+    keywords: null,
+    description: null,
+    category: null,
+    language: null,
+    customProperties: [
+        'test' => 'Test'
+    ]
+);
+
+$options = new Options();
+$options->setProperties($properties);
+$writer = new Writer($options);
 ```
 
 ### Sheet view (XLSX writer)
@@ -83,7 +114,7 @@ $sheetView->setZoomScale(150); // And other options
 $sheetView->setShowFormulas(true);
 $sheetView->setShowGridLines(false);
 $sheetView->setShowRowColHeaders(false);
-$sheetView->setShowZeroes(false);
+$sheetView->setShowZeros(false);
 $sheetView->setRightToLeft(true); // Change sheet direction
 $sheetView->setTabSelected(false);
 $sheetView->setShowOutlineSymbols(false);
@@ -101,6 +132,20 @@ $sheetView->setFreezeRow(2);
 $writer = new Writer();
 $writer->getCurrentSheet()->setSheetView($sheetView);
 ```
+
+### AutoFilter (XLSX Writer)
+
+AutoFilter can be configured using the `AutoFilter` class:
+
+```
+use OpenSpout\Writer\AutoFilter;
+use OpenSpout\Writer\XLSX\Writer;
+
+$autoFilter = new AutoFilter(0, 10, 5, 20);
+$writer->getCurrentSheet()->setAutoFilter($autoFilter);
+```
+
+Note that columns are 0-indexed, while rows are 1-indexed.
 
 ### Using a custom temporary folder
 
@@ -578,4 +623,78 @@ $reader->open($file));
 // Do stuff
 
 $reader->close();
+```
+
+## Protection
+
+There are a number of ways to protect the editing of a spreadsheet.
+
+> #### Note on security
+>
+> These protections are trivial to remove/bypass. They are only enforced if the application reading the spreadsheet
+> chooses to respect them. They should not be relied upon.
+
+### Workbook Protection
+
+> #### Note on LibreOffice support
+>
+> LibreOffice does not respect workbook protection.
+
+```php
+use OpenSpout\Writer\XLSX\Writer;
+use \OpenSpout\Writer\XLSX\Options
+use OpenSpout\Writer\XLSX\Options\WorkbookProtection;
+
+$protection = new WorkbookProtection(
+    password: 'password',
+    lockStructure: true, // Prevents adding, deleting, renaming, or rearranging worksheets
+    lockRevisions: true, // Restricts revision history
+    lockWindows: true, // Prevents resizing or moving the Excel window
+);
+
+$options = new Options()
+$options->setWorkbookProtection($protection);
+
+$writer = new Writer($options);
+```
+
+
+### Single Worksheet Protection
+
+> #### Note on LibreOffice support
+>
+> LibreOffice only respects the following protections, all others will be ignored:
+> - Select (un)protected cells
+> - Insert rows/columns
+> - Delete rows/columns
+
+```php
+use OpenSpout\Writer\XLSX\Writer;
+use OpenSpout\Writer\XLSX\Options\SheetProtection;
+
+$writer = new Writer();
+
+$protection = new SheetProtection(
+    password: 'password',
+    lockSheet: true,
+    lockColumnInsert: true,
+    lockColumnDelete: true,
+    lockColumnFormatting: true,
+    lockRowInsert: true,
+    lockRowDelete: true,
+    lockRowFormatting: true,
+    lockAutoFilter: true,
+    lockSort: true,
+    lockCellFormatting: true,
+    lockLockedCellSelection: true,
+    lockUnlockedCellsSelection: true,
+    lockObjects: true,
+    lockHyperlinkInsert: true,
+    lockPivotTables: true,
+    lockScenarios: true,
+);
+
+$writer
+    ->getCurrentSheet()
+    ->setSheetProtection($protection);
 ```

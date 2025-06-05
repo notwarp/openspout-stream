@@ -32,6 +32,11 @@ final class SheetTest extends TestCase
 
         self::assertFalse($sheets[0]->isVisible());
         self::assertTrue($sheets[1]->isVisible());
+
+        $sheets = $this->openFileAndReturnSheets('two_sheets_one_veryhidden_one_not.xlsx');
+
+        self::assertFalse($sheets[0]->isVisible());
+        self::assertTrue($sheets[1]->isVisible());
     }
 
     public function testReaderSheetIteratorKeyMethodShouldReturnFirstKey(): void

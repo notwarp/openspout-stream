@@ -14,9 +14,6 @@ abstract class AbstractWriter implements WriterInterface
     /** @var resource Pointer to the file/stream we will write to */
     protected $filePointer;
 
-    /** @var string document creator */
-    protected string $creator = 'OpenSpout';
-
     /** @var string Content-Type value for the header - to be defined by child class */
     protected static string $headerContentType;
 
@@ -124,7 +121,7 @@ abstract class AbstractWriter implements WriterInterface
             );
             $this->addXLSXHBFile();
         }
-
+  
         $this->openWriter($this->zip);
         $this->isWriterOpened = true;
     }
@@ -145,11 +142,6 @@ abstract class AbstractWriter implements WriterInterface
         foreach ($rows as $row) {
             $this->addRow($row);
         }
-    }
-
-    final public function setCreator(string $creator): void
-    {
-        $this->creator = $creator;
     }
 
     final public function getWrittenRowCount(): int

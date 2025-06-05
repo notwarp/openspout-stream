@@ -20,6 +20,22 @@ final class StyleManagerTest extends TestCase
         self::assertFalse($shouldFormatAsDate);
     }
 
+    public function testShouldReturnEmptyNumberFormatCodeForUnknownStyleId(): void
+    {
+        $styleManager = $this->getStyleManagerMock();
+        $numberFormatCode = $styleManager->getNumberFormatCode(0);
+
+        self::assertEmpty($numberFormatCode);
+    }
+
+    public function testShouldReturnEmptyNumberFormatCodeForNoNumFmtId(): void
+    {
+        $styleManager = $this->getStyleManagerMock([[], ['applyNumberFormat' => null, 'numFmtId' => null]]);
+        $numberFormatCode = $styleManager->getNumberFormatCode(1);
+
+        self::assertEmpty($numberFormatCode);
+    }
+
     public function testShouldFormatNumericValueAsDateWhenShouldNotApplyNumberFormat(): void
     {
         $styleManager = $this->getStyleManagerMock([[], ['applyNumberFormat' => false, 'numFmtId' => 14]]);

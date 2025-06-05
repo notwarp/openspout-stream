@@ -11,18 +11,18 @@ use RecursiveIteratorIterator;
 /**
  * @internal
  */
-final class TestUsingResource
+final readonly class TestUsingResource
 {
     private const RESOURCES_PATH = 'tests/resources';
 
     /** @var string Path to the test generated resources folder */
-    private readonly string $generatedResourcesPath;
+    private string $generatedResourcesPath;
 
     /** @var string Path to the test resources folder, that does not have writing permissions */
-    private readonly string $generatedUnwritableResourcesPath;
+    private string $generatedUnwritableResourcesPath;
 
     /** @var string Path to the test temp folder */
-    private readonly string $tempFolderPath;
+    private string $tempFolderPath;
 
     public function __construct()
     {
@@ -52,7 +52,7 @@ final class TestUsingResource
         $resourceType = pathinfo($resourceName, PATHINFO_EXTENSION);
         $generatedResourcePathForType = $this->generatedResourcesPath.\DIRECTORY_SEPARATOR.strtolower($resourceType);
         if (!file_exists($generatedResourcePathForType)) {
-            mkdir($generatedResourcePathForType, 0700, true);
+            mkdir($generatedResourcePathForType, 0o700, true);
         }
 
         return $generatedResourcePathForType.\DIRECTORY_SEPARATOR.$resourceName;
@@ -70,10 +70,10 @@ final class TestUsingResource
 
         if (!file_exists($this->generatedUnwritableResourcesPath)) {
             if (!file_exists($this->generatedResourcesPath)) {
-                mkdir($this->generatedResourcesPath, 0700, true);
+                mkdir($this->generatedResourcesPath, 0o700, true);
             }
 
-            mkdir($this->generatedUnwritableResourcesPath, 0500, true);
+            mkdir($this->generatedUnwritableResourcesPath, 0o500, true);
         }
 
         return realpath($this->generatedUnwritableResourcesPath).\DIRECTORY_SEPARATOR.$resourceName;
@@ -88,7 +88,7 @@ final class TestUsingResource
             $this->deleteFolderRecursively($this->tempFolderPath);
         }
 
-        mkdir($this->tempFolderPath, 0700, true);
+        mkdir($this->tempFolderPath, 0o700, true);
 
         return $this->tempFolderPath;
     }
