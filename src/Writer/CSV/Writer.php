@@ -10,6 +10,7 @@ use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Exception\IOException;
 use OpenSpout\Common\Helper\EncodingHelper;
 use OpenSpout\Writer\AbstractWriter;
+use ZipStream\ZipStream;
 
 final class Writer extends AbstractWriter
 {
@@ -38,7 +39,7 @@ final class Writer extends AbstractWriter
     /**
      * Opens the CSV streamer and makes it ready to accept data.
      */
-    protected function openWriter(): void
+    protected function openWriter(null|bool $zip = null): void
     {
         if ($this->options->SHOULD_ADD_BOM) {
             // Adds UTF-8 BOM for Unicode compatibility

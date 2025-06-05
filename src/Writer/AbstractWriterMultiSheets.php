@@ -10,6 +10,7 @@ use OpenSpout\Writer\Common\Entity\Sheet;
 use OpenSpout\Writer\Common\Manager\WorkbookManagerInterface;
 use OpenSpout\Writer\Exception\SheetNotFoundException;
 use OpenSpout\Writer\Exception\WriterNotOpenedException;
+use ZipStream\ZipStream;
 
 abstract class AbstractWriterMultiSheets extends AbstractWriter
 {
@@ -81,12 +82,12 @@ abstract class AbstractWriterMultiSheets extends AbstractWriter
         $this->workbookManager->setCurrentSheet($sheet);
     }
 
-    abstract protected function createWorkbookManager(): WorkbookManagerInterface;
+    abstract protected function createWorkbookManager(null|ZipStream $zip = null): WorkbookManagerInterface;
 
-    protected function openWriter(): void
+    protected function openWriter(null|ZipStream $zip = null): void
     {
         if (!isset($this->workbookManager)) {
-            $this->workbookManager = $this->createWorkbookManager();
+            $this->workbookManager = $this->createWorkbookManager($zip);
             $this->workbookManager->addNewSheetAndMakeItCurrent();
         }
     }
